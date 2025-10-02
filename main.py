@@ -119,7 +119,9 @@ def apply_and_save_all(jobs):
     fieldnames = ["date", "company", "Category", "job_title", "job_link", "applied"]
     # Build filename with today's date
     today_str = datetime.now().strftime("%d%b%Y").lower().lstrip("0")  # e.g. "2oct2025"
-    filename = f"{today_str}-shake.csv"
+    # filename = f"{today_str}-shake.csv"
+    filename = os.path.join("applied", f"{today_str}-shake.csv")
+
 
     # Check if file exists already
     file_exists = os.path.isfile(filename)
@@ -149,8 +151,8 @@ def apply_and_save_all(jobs):
 try:
     cmu_login()
     #go to job search page
-    url = "https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=3"
-    jobs = scrape_jobs(driver.current_url)
+    url = "https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=4"
+    jobs = scrape_jobs(url)
     apply_and_save_all(jobs)
 
 finally:
