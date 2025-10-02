@@ -18,6 +18,22 @@ print(EMAIL, PASSWORD)
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
+def apply(href, job_title):
+    driver.get(href)
+    print("Navigated to first job card:")
+    WebDriverWait(driver, 10).until(
+    EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[data-size='xlarge']")))
+    xlarge_links = driver.find_elements(By.CSS_SELECTOR, "a[data-size='xlarge']")
+    xlarge_values = [el.get_attribute("aria-label") for el in xlarge_links]
+    print("Xlarge links' aria-labels:", xlarge_values)
+
+    return {
+        "company": xlarge_values[0],
+        "Category": xlarge_values[2] if len(xlarge_values) > 2 else None,
+        "job_title": job_title,
+        "job_link": href,
+    }
+
 try:
     # Go to Handshake login
     driver.get("https://cmu.joinhandshake.com/login")
@@ -44,7 +60,37 @@ try:
     )
     print("✅ Duo approved and redirected to Handshake")
     print("Now at:", driver.current_url)
+    time.sleep(3)
+
+    #go to job search page
+    driver.get("https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=1")
+
+    WebDriverWait(driver, 20).until(
+    EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div[data-hook^='job-result-card']"))
+    )
+
+    print("✅ Job cards loaded")
+
+    # Find all job cards
+    cards = driver.find_elements(By.CSS_SELECTOR, "a[role='button']")
+    print(f"Found {len(cards)} job cards.")
+
+    jobs = []
+    for card in cards:
+        href = card.get_attribute("href")
+        job_title = card.get_attribute("aria-label")
+
+        if href and job_title:  # sanity check
+            if href.startswith("/"):
+                href = "https://cmu.joinhandshake.com" + href
+            jobs.append({"href": href, "job_title": job_title})
+
+    # now navigate safely
+    for job in jobs:
+        print(apply(job["href"], job["job_title"]))
     time.sleep(10)
+
 finally:
     driver.quit()
+
     
