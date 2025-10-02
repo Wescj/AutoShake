@@ -25,12 +25,20 @@ def apply(href, job_title):
         # Wait for buttons that contain "Apply"
         driver.get(href)
         print("Navigated to job card:")
+        # apply_btn = WebDriverWait(driver, 15).until(
+        #         EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Apply')]"))
+        # )
         apply_btn = WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Apply')]"))
+            EC.element_to_be_clickable((By.XPATH, "//button[contains(@aria-label, 'Apply')]"))
         )
+
+
+        time.sleep(1)  # wait for page to stabilize
         xlarge_links = driver.find_elements(By.CSS_SELECTOR, "a[data-size='xlarge']")
         xlarge_values = [el.get_attribute("aria-label") for el in xlarge_links]
         print("Xlarge links' aria-labels:", xlarge_values)
+
+
 
         text = apply_btn.text.strip()
         print("Apply button text:", text)
@@ -65,12 +73,12 @@ def cmu_login():
     try:
         # Go to Handshake login
         driver.get("https://cmu.joinhandshake.com/login")
-        time.sleep(3)
+        time.sleep(1)
 
         # Find button by text
         cmu_login = driver.find_element(By.XPATH, "//span[contains(text(), 'CMU Sign On')]")
         cmu_login.click()
-        time.sleep(2.5)
+        time.sleep(1)
 
         #login
         username_box = driver.find_element(By.ID, "username")
@@ -151,7 +159,7 @@ def apply_and_save_all(jobs):
 try:
     cmu_login()
     #go to job search page
-    url = "https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=4"
+    url = "https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=6"
     jobs = scrape_jobs(url)
     apply_and_save_all(jobs)
 
