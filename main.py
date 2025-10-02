@@ -44,6 +44,7 @@ def apply(href, job_title):
                     EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Submit Application')]"))
                 )
                 submit_btn.click()
+                applied = True
                 print("✅ Applied! ")
 
             except Exception as e:
@@ -60,46 +61,46 @@ def apply(href, job_title):
         "applied": applied
     }
 
-try:
-    # Go to Handshake login
-    driver.get("https://cmu.joinhandshake.com/login")
-    time.sleep(3)
+def cmu_login():
+    try:
+        # Go to Handshake login
+        driver.get("https://cmu.joinhandshake.com/login")
+        time.sleep(3)
 
-    # Find button by text
-    cmu_login = driver.find_element(By.XPATH, "//span[contains(text(), 'CMU Sign On')]")
-    cmu_login.click()
-    time.sleep(2.5)
+        # Find button by text
+        cmu_login = driver.find_element(By.XPATH, "//span[contains(text(), 'CMU Sign On')]")
+        cmu_login.click()
+        time.sleep(2.5)
 
-    #login
-    username_box = driver.find_element(By.ID, "username")
-    username_box.send_keys(EMAIL)  # from .env
+        #login
+        username_box = driver.find_element(By.ID, "username")
+        username_box.send_keys(EMAIL)  # from .env
 
-    # Fill password
-    password_box = driver.find_element(By.ID, "passwordinput")
-    password_box.send_keys(PASSWORD)
+        # Fill password
+        password_box = driver.find_element(By.ID, "passwordinput")
+        password_box.send_keys(PASSWORD)
 
-    password_box.send_keys(Keys.RETURN)
-    print("Waiting for Duo MFA approval...")
-    print("Manually approve Duo prompt if needed.")
-    WebDriverWait(driver, 60).until(
-    EC.url_contains("joinhandshake.com")   # back to Handshake domain
-    )
-    print("✅ Duo approved and redirected to Handshake")
-    print("Now at:", driver.current_url)
-    time.sleep(3)
+        password_box.send_keys(Keys.RETURN)
+        print("Waiting for Duo MFA approval...")
+        print("Manually approve Duo prompt if needed.")
+        WebDriverWait(driver, 60).until(
+        EC.url_contains("joinhandshake.com")   # back to Handshake domain
+        )
+        print("✅ Duo approved and redirected to Handshake")
+        print("Now at:", driver.current_url)
+        time.sleep(3)
+    except Exception as e:
+        print("❌ Login failed:", e)
 
-    #go to job search page
-    driver.get("https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=2")
+def scrape_jobs(url):
+    driver.get(url)
 
     WebDriverWait(driver, 20).until(
     EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div[data-hook^='job-result-card']"))
     )
-
-    print("✅ Job cards loaded")
-
     # Find all job cards
     cards = driver.find_elements(By.CSS_SELECTOR, "a[role='button']")
-    print(f"Found {len(cards)} job cards.")
+    print(f"✅ Found {len(cards)} job cards.")
 
     jobs = []
     for card in cards:
@@ -110,13 +111,15 @@ try:
             if href.startswith("/"):
                 href = "https://cmu.joinhandshake.com" + href
             jobs.append({"href": href, "job_title": job_title})
+    return jobs
 
+def apply_and_save_all(jobs):
+    
+    # Define headers once
+    fieldnames = ["date", "company", "Category", "job_title", "job_link", "applied"]
     # Build filename with today's date
     today_str = datetime.now().strftime("%d%b%Y").lower().lstrip("0")  # e.g. "2oct2025"
     filename = f"{today_str}-shake.csv"
-
-    # Define headers once
-    fieldnames = ["date", "company", "Category", "job_title", "job_link", "applied"]
 
     # Check if file exists already
     file_exists = os.path.isfile(filename)
@@ -142,6 +145,13 @@ try:
 
     time.sleep(10)
     print(f"✅ Results saved to {filename}")
+
+try:
+    cmu_login()
+    #go to job search page
+    url = "https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=3"
+    jobs = scrape_jobs(driver.current_url)
+    apply_and_save_all(jobs)
 
 finally:
     driver.quit()
