@@ -1,4 +1,3 @@
-````markdown
 # 🤖 AutoShake – Handshake Job Auto-Apply Bot
 
 AutoShake automates logging into [Handshake](https://cmu.joinhandshake.com), navigating job listings, and applying to jobs that use **internal applications** (it skips “Apply Externally”). Each run saves results into a dated CSV file under the `applied/` folder.
@@ -29,59 +28,4 @@ source .venv/bin/activate   # Mac/Linux
 
 # Install dependencies
 pip install -r requirements.txt
-````
-
-Create a `.env` file in the root directory with your credentials:
-
-```
-HANDSHAKE_EMAIL=your-andrew-id@andrew.cmu.edu
-HANDSHAKE_PASSWORD=yourpassword
-```
-
-⚠️ Never commit your `.env` file (make sure it’s in `.gitignore`). Duo push approval must still be done manually.
-
-## Usage
-
-```bash
-python main.py
-```
-
-Example output:
-
-```
-✅ Duo approved and redirected to Handshake
-✅ Found 48 job cards
-Navigated to job card:
-Apply button text: Apply
-✅ Applied!
-✅ Results saved to applied/2oct2025-shake.csv
-```
-
-## Output
-
-CSV logs are saved under the `applied/` folder, one file per day:
-
-```
-applied/
-  ├── 2oct2025-shake.csv
-  ├── 3oct2025-shake.csv
-  └── ...
-```
-
-Each row contains:
-
-* Date
-* Company
-* Category
-* Job title
-* Job link
-* Applied (True/False)
-
-## Disclaimer
-
-This project is for **educational purposes only**. Use responsibly and at your own risk — automated submissions may violate Handshake’s Terms of Service.
-
-```
-
-Do you also want me to generate a **ready-to-paste requirements.txt** so the README matches exactly?
 ```
