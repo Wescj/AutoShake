@@ -1,5 +1,3 @@
-Got it — here’s a **single continuous README.md** you can copy-paste directly, fully in Markdown, no split sections:
-
 ````markdown
 # 🤖 AutoShake – Handshake Job Auto-Apply Bot
 
