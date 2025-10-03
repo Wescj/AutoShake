@@ -18,6 +18,12 @@ EMAIL = os.getenv("HANDSHAKE_EMAIL")
 PASSWORD = os.getenv("HANDSHAKE_PASSWORD")
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+query = "software"
+results_per_page=25
+jobType=3
+page_start = 1
+page_end = 100
+
 
 def apply(href, job_title):
     applied = False
@@ -78,7 +84,7 @@ def cmu_login():
         # Find button by text
         cmu_login = driver.find_element(By.XPATH, "//span[contains(text(), 'CMU Sign On')]")
         cmu_login.click()
-        time.sleep(1)
+        time.sleep(5)
 
         #login
         username_box = driver.find_element(By.ID, "username")
@@ -156,10 +162,29 @@ def apply_and_save_all(jobs):
     time.sleep(10)
     print(f"✅ Results saved to {filename}")
 
+def build_jobsearch_url(query, results_per_page=25, jobType=3, page=1):
+    """
+    Build a Handshake job search URL with the given parameters.
+    """
+    base = "https://cmu.joinhandshake.com/job-search/"
+    return (
+        f"{base}?query={query}"
+        f"&per_page={results_per_page}"
+        f"&jobType={jobType}"
+        f"&sort=posted_date_desc"
+        f"&page={page}"
+    )
+
+# Example usage:
+
+
+
 try:
     cmu_login()
     #go to job search page
     url = "https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=6"
+    url = build_jobsearch_url(query, results_per_page, jobType, page_start)
+    print(url)
     jobs = scrape_jobs(url)
     apply_and_save_all(jobs)
 
