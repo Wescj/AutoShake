@@ -29,7 +29,7 @@ query = "software"
 results_per_page=25
 jobType=3
 page_start = 1
-page_end = 100
+page_end = 10
 
 def apply(href, job_title):
     applied = False
@@ -191,8 +191,11 @@ try:
     url = "https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=6"
     url = build_jobsearch_url(query, results_per_page, jobType, page_start)
     print(url)
-    jobs = scrape_jobs(url)
-    apply_and_save_all(jobs)
+    
+    for i in range(page_start, page_end + 1):
+        url = build_jobsearch_url(query, results_per_page, jobType, i)
+        jobs = scrape_jobs(url)
+        apply_and_save_all(jobs)
 
 finally:
     driver.quit()
