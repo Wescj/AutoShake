@@ -33,14 +33,13 @@ page_end = 10
 
 def apply(href, job_title):
     applied = False
+    xlarge_values = []
     try:
         # Wait for buttons that contain "Apply"
         driver.get(href)
         print("Navigated to job card:")
-        # apply_btn = WebDriverWait(driver, 15).until(
-        #         EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Apply')]"))
-        # )
-        apply_btn = WebDriverWait(driver, 15).until(
+
+        apply_btn = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//button[contains(@aria-label, 'Apply')]"))
         )
 
@@ -63,10 +62,13 @@ def apply(href, job_title):
                 submit_btn = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Submit Application')]"))
                 )
-                submit_btn.click()
-                applied = True
-                print("✅ Applied! ")
-
+                if not submit_btn.get_attribute("disabled"):
+                    submit_btn.click()
+                    applied = True
+                    print("✅ Applied!")
+                    time.sleep(0.5) # so I can see it lmao
+                else:
+                    print("⚠️ Submit button is disabled — additional info required.")
             except Exception as e:
                 print("❌ Could not find Submit Application button:")
 
@@ -154,8 +156,18 @@ def apply_and_save_all(jobs):
 
     # Process jobs one by one and append immediately
     for job in jobs:
-        result = apply(job["href"], job["job_title"])
-        print(result)
+        try:
+            result = apply(job["href"], job["job_title"])
+        except Exception as e:
+            print(f"⚠️ Error processing {job['job_title']}: {e}")
+            result = {
+                "date": today_str,
+                "company": None,
+                "Category": None,
+                "job_title": job["job_title"],
+                "job_link": job["href"],
+                "applied": False
+            }
 
         # Add date to row
         result["date"] = today_str  
