@@ -18,12 +18,18 @@ EMAIL = os.getenv("HANDSHAKE_EMAIL")
 PASSWORD = os.getenv("HANDSHAKE_PASSWORD")
 
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+
+# Spoof timezone to America/New_York
+driver.execute_cdp_cmd("Emulation.setTimezoneOverride", {
+    "timezoneId": "America/New_York"
+})
+
+
 query = "software"
 results_per_page=25
 jobType=3
 page_start = 1
 page_end = 100
-
 
 def apply(href, job_title):
     applied = False
