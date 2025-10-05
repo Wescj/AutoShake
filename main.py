@@ -25,11 +25,36 @@ driver.execute_cdp_cmd("Emulation.setTimezoneOverride", {
 })
 
 
-query = "software"
-results_per_page=25
-jobType=3
-page_start = 1
-page_end = 10
+def get_user_inputs():
+    """
+    Prompt user for job search parameters.
+    Defaults are used if the user presses Enter without typing.
+    """
+    query = input("Enter job search query (default: none): ").strip()
+    if query == "":
+        query = None   # allow null query
+
+    try:
+        results_per_page = int(input("Results per page (default: 25): ") or 25)
+    except ValueError:
+        results_per_page = 25
+
+    try:
+        jobType = int(input("Job type (default: 3): ") or 3)
+    except ValueError:
+        jobType = 3
+
+    try:
+        page_start = int(input("Start page (default: 1): ") or 1)
+    except ValueError:
+        page_start = 1
+
+    try:
+        page_end = int(input("End page (default: 10): ") or 10)
+    except ValueError:
+        page_end = 10
+
+    return query, results_per_page, jobType, page_start, page_end
 
 def apply(href, job_title):
     applied = False
@@ -180,30 +205,34 @@ def apply_and_save_all(jobs):
     time.sleep(10)
     print(f"✅ Results saved to {filename}")
 
-def build_jobsearch_url(query, results_per_page=25, jobType=3, page=1):
+def build_jobsearch_url(query=None, results_per_page=25, jobType=3, page=1):
     """
     Build a Handshake job search URL with the given parameters.
+    If query is None, it uses the simpler base link without ?query.
     """
-    base = "https://cmu.joinhandshake.com/job-search/"
-    return (
-        f"{base}?query={query}"
-        f"&per_page={results_per_page}"
-        f"&jobType={jobType}"
-        f"&sort=posted_date_desc"
-        f"&page={page}"
-    )
-
-# Example usage:
-
+    if query:  # normal case with search term
+        base = "https://cmu.joinhandshake.com/job-search/"
+        return (
+            f"{base}?query={query}"
+            f"&per_page={results_per_page}"
+            f"&jobType={jobType}"
+            f"&sort=posted_date_desc"
+            f"&page={page}"
+        )
+    else:  # no query
+        base = "https://cmu.joinhandshake.com/job-search"
+        return (
+            f"{base}?page={page}"
+            f"&per_page={results_per_page}"
+        )
 
 
 try:
     cmu_login()
     #go to job search page
-    url = "https://cmu.joinhandshake.com/job-search/?query=software&per_page=25&jobType=3&sort=posted_date_desc&page=6"
-    url = build_jobsearch_url(query, results_per_page, jobType, page_start)
-    print(url)
-    
+
+    #Grab values at runtime
+    query, results_per_page, jobType, page_start, page_end = get_user_inputs()
     for i in range(page_start, page_end + 1):
         url = build_jobsearch_url(query, results_per_page, jobType, i)
         jobs = scrape_jobs(url)
