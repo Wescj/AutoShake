@@ -228,11 +228,11 @@ def build_jobsearch_url(query=None, results_per_page=25, jobType=3, page=1):
 
 
 try:
-    cmu_login()
-    #go to job search page
-
     #Grab values at runtime
     query, results_per_page, jobType, page_start, page_end = get_user_inputs()
+    cmu_login()
+    
+    #go to job search page
     for i in range(page_start, page_end + 1):
         url = build_jobsearch_url(query, results_per_page, jobType, i)
         jobs = scrape_jobs(url)
