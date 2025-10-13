@@ -12,17 +12,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# Load environment variables from .env file
-load_dotenv()
-EMAIL = os.getenv("HANDSHAKE_EMAIL")
-PASSWORD = os.getenv("HANDSHAKE_PASSWORD")
 
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-
-# Spoof timezone to America/New_York
-driver.execute_cdp_cmd("Emulation.setTimezoneOverride", {
-    "timezoneId": "America/New_York"
-})
 
 
 def get_user_inputs():
@@ -230,6 +220,19 @@ def build_jobsearch_url(query=None, results_per_page=25, jobType=3, page=1):
 try:
     #Grab values at runtime
     query, results_per_page, jobType, page_start, page_end = get_user_inputs()
+
+    # Load environment variables from .env file
+    load_dotenv()
+    EMAIL = os.getenv("HANDSHAKE_EMAIL")
+    PASSWORD = os.getenv("HANDSHAKE_PASSWORD")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+
+    # Spoof timezone to America/New_York
+    driver.execute_cdp_cmd("Emulation.setTimezoneOverride", {
+        "timezoneId": "America/New_York"
+    })
+
     cmu_login()
     
     #go to job search page
