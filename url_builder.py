@@ -37,11 +37,22 @@ class HandshakeURLBuilder:
             del self.params[key]
         return self
 
-    def build(self):
-        """Build the full URL string dynamically based on current settings."""
+    def build(self, page: int = None):
+        """
+        Build the full URL string dynamically based on current settings.
+        If `page` is provided, it overrides the current page parameter
+        without modifying the stored params.
+        """
         base = f"https://{self.school_domain}.joinhandshake.com/job-search"
+
+        # make a shallow copy so we don't mutate self.params
+        params_copy = self.params.copy()
+
+        if page is not None:
+            params_copy["page"] = page
+
         query_string = "&".join(
-            f"{k}={v}" for k, v in self.params.items() if v is not None
+            f"{k}={v}" for k, v in params_copy.items() if v is not None
         )
         return f"{base}?{query_string}" if query_string else base
 
