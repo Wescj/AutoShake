@@ -1,2 +1,4 @@
 .env
 *shake.csv
+__pycache__/
+*.pyc

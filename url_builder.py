@@ -51,7 +51,3 @@ class HandshakeURLBuilder:
         new_builder.params = self.params.copy()
         return new_builder
 
-builder = HandshakeURLBuilder("cmu")
-builder.set_param("query", "software").set_param("jobType",3).set_param("pay%5BsalaryType%5D","1")
-
-print(builder.build())

@@ -1,19 +1,34 @@
-from dotenv import load_dotenv # type: ignore
+from dotenv import load_dotenv 
 import os
 import time
 import csv
 from datetime import datetime
 
-from selenium import webdriver # type: ignore
-from selenium.webdriver.common.by import By # type: ignore
-from selenium.webdriver.common.keys import Keys # type: ignore
-from selenium.webdriver.chrome.service import Service # type: ignore
-from webdriver_manager.chrome import ChromeDriverManager # type: ignore
-from selenium.webdriver.support.ui import WebDriverWait # type: ignore
-from selenium.webdriver.support import expected_conditions as EC # type: ignore
+from selenium import webdriver 
+from selenium.webdriver.common.by import By 
+from selenium.webdriver.common.keys import Keys 
+from selenium.webdriver.chrome.service import Service 
+from webdriver_manager.chrome import ChromeDriverManager 
+from selenium.webdriver.support.ui import WebDriverWait 
+from selenium.webdriver.support import expected_conditions as EC 
+
+from url_builder import HandshakeURLBuilder
 
 
+def get_school_and_query():
+    """
+    Prompt user for school subdomain and job search query.
+    Defaults to 'cmu' and no query if the user presses Enter without typing.
+    """
+    school = input("Enter school subdomain (default: cmu): ").strip()
+    if school == "":
+        school = "cmu"
 
+    query = input("Enter job search query (default: none): ").strip()
+    if query == "":
+        query = None   # allow null query
+
+    return school, query
 
 def get_user_inputs():
     """
@@ -219,7 +234,14 @@ def build_jobsearch_url(query=None, results_per_page=25, jobType=3, page=1):
 
 try:
     #Grab values at runtime
+    school, query = get_school_and_query()
+    print(f"Using school: {school}, query: {query}")
+    builder = HandshakeURLBuilder(school, query)
+    print(builder.build())
+    
     query, results_per_page, jobType, page_start, page_end = get_user_inputs()
+
+    
 
     # Load environment variables from .env file
     load_dotenv()
