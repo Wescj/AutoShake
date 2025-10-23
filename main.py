@@ -28,7 +28,17 @@ def get_school_and_query():
     if query == "":
         query = None   # allow null query
 
-    return school, query
+    try:
+        page_start = int(input("Start page (default: 1): ") or 1)
+    except ValueError:
+        page_start = 1
+
+    try:
+        page_end = int(input("End page (default: 10): ") or 10)
+    except ValueError:
+        page_end = 10
+
+    return school, query, page_start, page_end
 
 def get_user_inputs():
     """
@@ -144,6 +154,24 @@ def cmu_login():
     except Exception as e:
         print("❌ Login failed:", e)
 
+def manual_login():
+    """
+    Open the Handshake login page and let the user log in manually.
+    Waits until the page redirects to a post-login URL before continuing.
+    """
+    login_url = f"https://{builder.school_domain}.joinhandshake.com/login"
+    driver.get(login_url)
+    print(f"🔑 Please log in manually at: {login_url}")
+
+    try:
+        # Wait until URL contains "joinhandshake.com" but not "/login"
+        WebDriverWait(driver, 300).until(
+            lambda d: "joinhandshake.com" in d.current_url and "/login" not in d.current_url
+        )
+        print("✅ Manual login successful. Current URL:", driver.current_url)
+    except Exception as e:
+        print("❌ Manual login failed or timed out:", e)
+
 def scrape_jobs(url):
     driver.get(url)
 
@@ -234,19 +262,11 @@ def build_jobsearch_url(query=None, results_per_page=25, jobType=3, page=1):
 
 try:
     #Grab values at runtime
-    school, query = get_school_and_query()
+    school, query, page_start, page_end = get_school_and_query()
     print(f"Using school: {school}, query: {query}")
     builder = HandshakeURLBuilder(school, query)
     print(builder.build())
-    
-    query, results_per_page, jobType, page_start, page_end = get_user_inputs()
 
-    
-
-    # Load environment variables from .env file
-    load_dotenv()
-    EMAIL = os.getenv("HANDSHAKE_EMAIL")
-    PASSWORD = os.getenv("HANDSHAKE_PASSWORD")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 
@@ -255,11 +275,23 @@ try:
         "timezoneId": "America/New_York"
     })
 
-    cmu_login()
+    if school == "cmu":
+        print("Using CMU SSO login flow.")
+
+        # Load environment variables from .env file
+        load_dotenv()
+        EMAIL = os.getenv("HANDSHAKE_EMAIL")
+        PASSWORD = os.getenv("HANDSHAKE_PASSWORD")
+
+        cmu_login()
+    else:
+        print("Manual mode, imagine not being in CMU lol.")
+        manual_login()
     
     #go to job search page
     for i in range(page_start, page_end + 1):
-        url = build_jobsearch_url(query, results_per_page, jobType, i)
+        url = builder.build(page=i)
+        print(f"Scraping page {i}: {url}")
         jobs = scrape_jobs(url)
         apply_and_save_all(jobs)
 
