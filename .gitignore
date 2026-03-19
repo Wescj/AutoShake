@@ -2,3 +2,4 @@
 *shake.csv
 __pycache__/
 *.pyc
+/cover_letters
