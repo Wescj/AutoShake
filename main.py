@@ -261,6 +261,8 @@ def scrape_jobs(url):
         job_title = card.get_attribute("aria-label")
 
         if href and job_title:  # sanity check
+            if job_title.startswith("View "):
+                job_title = job_title[5:].strip()
             if href.startswith("/"):
                 href = "https://cmu.joinhandshake.com" + href
             jobs.append({"href": href, "job_title": job_title})
