@@ -1,3 +1,5 @@
 selenium==4.25.0
 webdriver-manager==4.0.2
 python-dotenv==1.0.1
+openai==2.29.0
+pypdf==6.9.1

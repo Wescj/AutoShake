@@ -1,4 +1,5 @@
 .env
 *shake.csv
+cover_letters/
 __pycache__/
 *.pyc
