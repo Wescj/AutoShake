@@ -15,6 +15,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from url_builder import HandshakeURLBuilder
 
 
+DEBUG_SINGLE_JOB_MODE = True
+DEBUG_JOB_URL = "https://cmu.joinhandshake.com/job-search/10808388?page=1&per_page=25"
+
+
 def extract_required_documents():
     requirements = []
 
@@ -53,6 +57,88 @@ def extract_required_documents():
         print(f"⚠️ Could not extract document requirements: {e}")
 
     return requirements
+
+
+def select_latest_transcript_if_needed(required_documents):
+    if "Attach your transcript" not in required_documents:
+        print("No transcript required.")
+        return False
+
+    try:
+        form = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-hook='apply-modal-content'] form"))
+        )
+        fieldsets = form.find_elements(By.CSS_SELECTOR, "fieldset")
+
+        for fieldset in fieldsets:
+            heading_elements = fieldset.find_elements(By.CSS_SELECTOR, "legend h5")
+            if not heading_elements:
+                continue
+
+            heading = heading_elements[0].text.strip().lower()
+            if heading != "attach your transcript":
+                continue
+
+            # Skip if a transcript is already attached in this section.
+            if fieldset.find_elements(By.CSS_SELECTOR, "[role='alert'][data-status='positive']"):
+                print("Transcript already attached.")
+                return False
+
+            transcript_inputs = fieldset.find_elements(By.CSS_SELECTOR, "input[role='combobox']")
+            if not transcript_inputs:
+                print("⚠️ Could not find transcript selector.")
+                return False
+
+            transcript_input = transcript_inputs[0]
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", transcript_input)
+            transcript_input.click()
+
+            listbox_id = transcript_input.get_attribute("aria-controls")
+            if not listbox_id:
+                print("⚠️ Transcript selector did not expose a listbox id.")
+                return False
+
+            first_option = WebDriverWait(driver, 10).until(
+                lambda d: d.find_element(
+                    By.CSS_SELECTOR,
+                    f"#{listbox_id} div[role='option']",
+                )
+            )
+            first_option_text = first_option.text.strip()
+            first_option.click()
+
+            WebDriverWait(driver, 10).until(
+                lambda d: transcript_input.get_attribute("value").strip() != ""
+            )
+            print(f"✅ Selected transcript: {first_option_text}")
+            return True
+    except Exception as e:
+        print(f"⚠️ Could not select transcript: {e}")
+
+    return False
+
+
+def wait_for_submit_button_ready(timeout=45):
+    def submit_button_enabled(driver):
+        submit_btn = driver.find_element(By.XPATH, "//button[contains(., 'Submit Application')]")
+        disabled_attr = submit_btn.get_attribute("disabled")
+        aria_disabled = submit_btn.get_attribute("aria-disabled")
+        is_enabled = not disabled_attr and aria_disabled != "true"
+        return submit_btn if is_enabled else False
+
+    return WebDriverWait(driver, timeout).until(submit_button_enabled)
+
+
+def is_application_modal_open():
+    return bool(driver.find_elements(By.CSS_SELECTOR, "div[data-hook='apply-modal-content'] form"))
+
+
+def click_submit_application():
+    submit_btn = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Submit Application')]"))
+    )
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", submit_btn)
+    submit_btn.click()
 
 
 def ensure_csv_headers(filename, desired_fieldnames):
@@ -168,20 +254,26 @@ def apply(href, job_title):
             try:
                 required_documents = extract_required_documents()
                 print("Required documents:", required_documents)
+                click_submit_application()
+                time.sleep(1)
 
-                # Wait for the Submit Application button to appear
-                submit_btn = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Submit Application')]"))
-                )
-                if not submit_btn.get_attribute("disabled"):
+                if is_application_modal_open():
+                    print("Application still open after initial submit; completing required documents.")
+                    select_latest_transcript_if_needed(required_documents)
+
+                    # Wait until uploads finish processing and submit becomes enabled again.
+                    submit_btn = wait_for_submit_button_ready(timeout=45)
                     submit_btn.click()
+                    time.sleep(1)
+
+                if not is_application_modal_open():
                     applied = True
                     print("✅ Applied!")
                     time.sleep(0.5) # so I can see it lmao
                 else:
-                    print("⚠️ Submit button is disabled — additional info required.")
+                    print("⚠️ Application modal is still open after submit retry.")
             except Exception as e:
-                print("❌ Could not find Submit Application button:")
+                print(f"❌ Could not submit application: {e}")
 
     except Exception as e:
         print("❌ Could not find apply button:")
@@ -317,6 +409,15 @@ def apply_and_save_all(jobs):
     time.sleep(10)
     print(f"✅ Results saved to {filename}")
 
+
+def debug_apply_single_job(debug_job_url=DEBUG_JOB_URL):
+    debug_job = {
+        "href": debug_job_url,
+        "job_title": "Debug Handshake Job",
+    }
+    print(f"Running debug apply flow for: {debug_job_url}")
+    apply_and_save_all([debug_job])
+
 def build_jobsearch_url(query=None, results_per_page=25, jobType=3, page=1):
     """
     Build a Handshake job search URL with the given parameters.
@@ -365,14 +466,18 @@ try:
         cmu_login()
     else:
         print("Manual mode, imagine not being in CMU lol.")
+        load_dotenv()
         manual_login()
     
-    #go to job search page
-    for i in range(page_start, page_end + 1):
-        url = builder.build(page=i)
-        print(f"Scraping page {i}: {url}")
-        jobs = scrape_jobs(url)
-        apply_and_save_all(jobs)
+    if DEBUG_SINGLE_JOB_MODE:
+        debug_apply_single_job()
+    else:
+        #go to job search page
+        for i in range(page_start, page_end + 1):
+            url = builder.build(page=i)
+            print(f"Scraping page {i}: {url}")
+            jobs = scrape_jobs(url)
+            apply_and_save_all(jobs)
 
 finally:
     driver.quit()
