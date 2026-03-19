@@ -15,6 +15,73 @@ from selenium.webdriver.support import expected_conditions as EC
 from url_builder import HandshakeURLBuilder
 
 
+def extract_required_documents():
+    requirements = []
+
+    try:
+        form = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-hook='apply-modal-content'] form"))
+        )
+        fieldsets = form.find_elements(By.CSS_SELECTOR, "fieldset")
+
+        for fieldset in fieldsets:
+            # Skip requirements that are already satisfied by an attached document.
+            if fieldset.find_elements(By.CSS_SELECTOR, "[role='alert'][data-status='positive']"):
+                continue
+
+            heading = ""
+            heading_elements = fieldset.find_elements(By.CSS_SELECTOR, "legend h5")
+            if heading_elements:
+                heading = heading_elements[0].text.strip()
+
+            if not heading:
+                continue
+
+            requirement = heading
+            if heading.lower() == "attach other required documents":
+                instruction_elements = fieldset.find_elements(
+                    By.XPATH,
+                    ".//span[contains(normalize-space(.), 'Instructions from employer:')]/following-sibling::span[1]",
+                )
+                if instruction_elements:
+                    instruction_text = instruction_elements[0].text.strip()
+                    if instruction_text:
+                        requirement = instruction_text
+
+            requirements.append(requirement)
+    except Exception as e:
+        print(f"⚠️ Could not extract document requirements: {e}")
+
+    return requirements
+
+
+def ensure_csv_headers(filename, desired_fieldnames):
+    if not os.path.isfile(filename):
+        with open(filename, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=desired_fieldnames)
+            writer.writeheader()
+        return desired_fieldnames
+
+    with open(filename, mode="r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        existing_fieldnames = reader.fieldnames or []
+        existing_rows = list(reader)
+
+    merged_fieldnames = []
+    for fieldname in existing_fieldnames + desired_fieldnames:
+        if fieldname and fieldname not in merged_fieldnames:
+            merged_fieldnames.append(fieldname)
+
+    if merged_fieldnames != existing_fieldnames:
+        with open(filename, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=merged_fieldnames)
+            writer.writeheader()
+            for row in existing_rows:
+                writer.writerow({field: row.get(field, "") for field in merged_fieldnames})
+
+    return merged_fieldnames
+
+
 def get_school_and_query():
     """
     Prompt user for school subdomain and job search query.
@@ -74,6 +141,7 @@ def get_user_inputs():
 def apply(href, job_title):
     applied = False
     xlarge_values = []
+    required_documents = []
     try:
         # Wait for buttons that contain "Apply"
         driver.get(href)
@@ -98,6 +166,9 @@ def apply(href, job_title):
         else:
             apply_btn.click()
             try:
+                required_documents = extract_required_documents()
+                print("Required documents:", required_documents)
+
                 # Wait for the Submit Application button to appear
                 submit_btn = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Submit Application')]"))
@@ -120,7 +191,9 @@ def apply(href, job_title):
         "Category": xlarge_values[2] if len(xlarge_values) > 2 else None,
         "job_title": job_title,
         "job_link": href,
-        "applied": applied
+        "applied": applied,
+        "required_documents_count": len(required_documents),
+        "required_documents": " | ".join(required_documents),
     }
 
 def cmu_login():
@@ -196,21 +269,23 @@ def scrape_jobs(url):
 def apply_and_save_all(jobs):
     
     # Define headers once
-    fieldnames = ["date", "company", "Category", "job_title", "job_link", "applied"]
+    desired_fieldnames = [
+        "date",
+        "company",
+        "Category",
+        "job_title",
+        "job_link",
+        "applied",
+        "required_documents_count",
+        "required_documents",
+    ]
     # Build filename with today's date
     today_str = datetime.now().strftime("%d%b%Y").lower().lstrip("0")  # e.g. "2oct2025"
     # filename = f"{today_str}-shake.csv"
     filename = os.path.join("applied", f"{today_str}-shake.csv")
 
 
-    # Check if file exists already
-    file_exists = os.path.isfile(filename)
-
-    # If not, create it with headers
-    if not file_exists:
-        with open(filename, mode="w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
+    fieldnames = ensure_csv_headers(filename, desired_fieldnames)
 
     # Process jobs one by one and append immediately
     for job in jobs:
@@ -224,7 +299,9 @@ def apply_and_save_all(jobs):
                 "Category": None,
                 "job_title": job["job_title"],
                 "job_link": job["href"],
-                "applied": False
+                "applied": False,
+                "required_documents_count": 0,
+                "required_documents": "",
             }
 
         # Add date to row
